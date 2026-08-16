@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.alimorrisanevalues;
+package com.alimorrisanevalues;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

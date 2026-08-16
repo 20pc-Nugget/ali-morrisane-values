@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.alimorrisanevalues;
+package com.alimorrisanevalues;
 
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
@@ -53,46 +53,6 @@ public class AliMorrisaneValuesPlugin extends Plugin
         ALI_RUNE_PRICES.put(566, 150);  // Soul
     }
 
-    // 1. Embedded explicit OSRS client mapping enum table requested by user
-    public enum PouchRune {
-        NONE(0, -1),
-        AIR(1, 556),
-        WATER(2, 555),
-        EARTH(3, 557),
-        FIRE(4, 554),
-        MIND(5, 558),
-        CHAOS(6, 562),
-        DEATH(7, 560),
-        BLOOD(8, 565),
-        COSMIC(9, 564),
-        NATURE(10, 561),
-        LAW(11, 563),
-        SOUL(12, 566),
-        ASTRAL(13, 9075),
-        WRATH(14, 21880),
-        MIST(15, 4695),
-        MUD(16, 4698),
-        DUST(17, 4696),
-        LAVA(18, 4699),
-        STEAM(19, 4694),
-        SMOKE(20, 4697);
-
-        private final int varbitValue;
-        private final int itemId;
-
-        PouchRune(int varbitValue, int itemId) {
-            this.varbitValue = varbitValue;
-            this.itemId = itemId;
-        }
-
-        public static int getItemIdByVarbit(int value) {
-            for (PouchRune rune : values()) {
-                if (rune.varbitValue == value) return rune.itemId;
-            }
-            return -1;
-        }
-    }
-
     private NavigationButton sidebarNavigationButton;
 
     @Provides
@@ -137,64 +97,55 @@ public class AliMorrisaneValuesPlugin extends Plugin
     private void updateAllRuneValues()
     {
         final ItemContainer inventoryContainer = client.getItemContainer(InventoryID.INVENTORY);
+        final ItemContainer lootingBagContainer = client.getItemContainer(516);
+        final ItemContainer divineRunePouchContainer = client.getItemContainer(641);
 
-        // 2. Initialize baseline tracking collections
         final Map<Integer, Long> aggregatedCounts = new HashMap<>();
         for (int itemId : ALI_RUNE_PRICES.keySet())
         {
             aggregatedCounts.put(itemId, 0L);
         }
 
-        // Tally inventory items and extract configuration context properties
-        int activePouchSlots = 0;
-
+        // 1. Scan standard Inventory bag slots
         if (inventoryContainer != null)
         {
             for (Item item : inventoryContainer.getItems())
             {
-                int canonicalId = itemManager.canonicalize(item.getId());
-
-                // Track down the exact pouch capacity limit rules
-                if (canonicalId == 12791 || canonicalId == 24416) // Standard/Imbued 3-Slot
+                if (aggregatedCounts.containsKey(item.getId()))
                 {
-                    activePouchSlots = 3;
-                }
-                else if (canonicalId == 27281 || canonicalId == 27509) // Standard/Imbued Divine 4-Slot
-                {
-                    activePouchSlots = 4;
-                }
-
-                if (aggregatedCounts.containsKey(canonicalId))
-                {
-                    aggregatedCounts.put(canonicalId, aggregatedCounts.get(canonicalId) + item.getQuantity());
+                    aggregatedCounts.put(item.getId(), aggregatedCounts.get(item.getId()) + item.getQuantity());
                 }
             }
         }
 
-        // 3. Complete Varbit data frame traversal using the user-defined Enum data table
-        if (activePouchSlots > 0)
+        // 2. Scan Looting Bag contents
+        if (lootingBagContainer != null)
         {
-            @Varbit int[] typeVarbits = {Varbits.RUNE_POUCH_RUNE1, Varbits.RUNE_POUCH_RUNE2, Varbits.RUNE_POUCH_RUNE3, Varbits.RUNE_POUCH_RUNE4};
-            @Varbit int[] amountVarbits = {Varbits.RUNE_POUCH_AMOUNT1, Varbits.RUNE_POUCH_AMOUNT2, Varbits.RUNE_POUCH_AMOUNT3, Varbits.RUNE_POUCH_AMOUNT4};
-
-            for (int i = 0; i < activePouchSlots; i++)
+            for (Item item : lootingBagContainer.getItems())
             {
-                int varbitValue = client.getVarbitValue(typeVarbits[i]);
-                int amount = client.getVarbitValue(amountVarbits[i]);
-
-                if (amount > 0)
+                if (aggregatedCounts.containsKey(item.getId()))
                 {
-                    // Query the exact PouchRune mapping method
-                    int trueGlobalItemId = PouchRune.getItemIdByVarbit(varbitValue);
-                    if (aggregatedCounts.containsKey(trueGlobalItemId))
-                    {
-                        aggregatedCounts.put(trueGlobalItemId, aggregatedCounts.get(trueGlobalItemId) + amount);
-                    }
+                    aggregatedCounts.put(item.getId(), aggregatedCounts.get(item.getId()) + item.getQuantity());
                 }
             }
         }
 
-        // 4. Calculate final values and flush to UI
+        // 3. Scan 4-slot upgraded Divine Rune Pouch container
+        if (divineRunePouchContainer != null)
+        {
+            for (Item item : divineRunePouchContainer.getItems())
+            {
+                if (aggregatedCounts.containsKey(item.getId()))
+                {
+                    aggregatedCounts.put(item.getId(), aggregatedCounts.get(item.getId()) + item.getQuantity());
+                }
+            }
+        }
+
+        // 4. Scan 3-slot standard pouch via native Varbit values
+        tallyStandardPouchVarbits(aggregatedCounts);
+
+        // 5. Update independent user panel nodes
         long cumulativeGrandTotalGpValue = 0;
         for (int itemId : ALI_RUNE_PRICES.keySet())
         {
@@ -206,5 +157,50 @@ public class AliMorrisaneValuesPlugin extends Plugin
         }
 
         visualPanel.refreshTotalLumpSum(cumulativeGrandTotalGpValue);
+    }
+
+    private void tallyStandardPouchVarbits(Map<Integer, Long> aggregatedCounts)
+    {
+        @Varbit int[] typeVarbits = {Varbits.RUNE_POUCH_RUNE1, Varbits.RUNE_POUCH_RUNE2, Varbits.RUNE_POUCH_RUNE3};
+        @Varbit int[] amountVarbits = {Varbits.RUNE_POUCH_AMOUNT1, Varbits.RUNE_POUCH_AMOUNT2, Varbits.RUNE_POUCH_AMOUNT3};
+
+        for (int i = 0; i < typeVarbits.length; i++)
+        {
+            int varbitValue = client.getVarbitValue(typeVarbits[i]);
+            int amount = client.getVarbitValue(amountVarbits[i]);
+
+            if (amount > 0)
+            {
+                int trueGlobalItemId = convertVarbitToRuneItemId(varbitValue);
+                if (aggregatedCounts.containsKey(trueGlobalItemId))
+                {
+                    aggregatedCounts.put(trueGlobalItemId, aggregatedCounts.get(trueGlobalItemId) + amount);
+                }
+            }
+        }
+    }
+
+    /**
+     * Official OSRS Internal Client Cache Rune Pouch Varbit Mapping Index
+     */
+    private int convertVarbitToRuneItemId(int varbitValue)
+    {
+        switch (varbitValue)
+        {
+            case 1: return 556;   // Air rune
+            case 2: return 555;   // Water rune
+            case 3: return 557;   // Earth rune
+            case 4: return 554;   // Fire rune
+            case 5: return 558;   // Mind rune
+            case 6: return 562;   // Chaos rune
+            case 7: return 560;   // Death rune
+            case 8: return 565;   // Blood rune
+            case 9: return 564;   // Cosmic rune
+            case 10: return 561;  // Nature rune
+            case 11: return 563;  // Law rune
+            case 12: return 559;  // Body rune
+            case 13: return 566;  // Soul rune
+            default: return -1;
+        }
     }
 }
