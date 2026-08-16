@@ -1,4 +1,4 @@
-package com.alimorrisanevalues;
+package net.runelite.client.plugins.alimorrisanevalues;
 
 import java.awt.BorderLayout;
 import java.awt.Font;
@@ -16,8 +16,7 @@ import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.QuantityFormatter;
 
-public class AliMorrisaneValuesPanel extends PluginPanel
-{
+public class AliMorrisaneValuesPanel extends PluginPanel {
     private final ItemManager itemManager;
     private final Map<Integer, JLabel> valueLabels = new HashMap<>();
     private final JLabel totalValueLabel = new JLabel("0 GP", JLabel.RIGHT);
@@ -29,8 +28,7 @@ public class AliMorrisaneValuesPanel extends PluginPanel
     private static final int[] CATALYTIC_RUNES = {558, 559, 562, 560, 565, 566, 563, 564, 561}; // Mind, Body, Chaos, Death, Blood, Soul, Law, Cosmic, Nature
 
     @Inject
-    public AliMorrisaneValuesPanel(final ItemManager itemManager)
-    {
+    public AliMorrisaneValuesPanel(final ItemManager itemManager) {
         super();
         this.itemManager = itemManager;
 
@@ -58,8 +56,7 @@ public class AliMorrisaneValuesPanel extends PluginPanel
 
         // 2. Elemental Section Header
         addSectionHeader(container, "Elemental Runes", gbc);
-        for (int itemId : ELEMENTAL_RUNES)
-        {
+        for (int itemId : ELEMENTAL_RUNES) {
             addRuneRow(container, itemManager, itemId, gbc);
         }
 
@@ -67,8 +64,7 @@ public class AliMorrisaneValuesPanel extends PluginPanel
         gbc.insets = new Insets(15, 0, 5, 0);
         addSectionHeader(container, "Catalytic Runes", gbc);
         gbc.insets = new Insets(0, 0, 5, 0);
-        for (int itemId : CATALYTIC_RUNES)
-        {
+        for (int itemId : CATALYTIC_RUNES) {
             addRuneRow(container, itemManager, itemId, gbc);
         }
 
@@ -91,8 +87,7 @@ public class AliMorrisaneValuesPanel extends PluginPanel
         add(summaryFooterPanel, BorderLayout.SOUTH);
     }
 
-    private void addSectionHeader(JPanel container, String title, GridBagConstraints gbc)
-    {
+    private void addSectionHeader(JPanel container, String title, GridBagConstraints gbc) {
         final JLabel sectionLabel = new JLabel(title);
         sectionLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
         sectionLabel.setForeground(ColorScheme.BRAND_ORANGE);
@@ -101,8 +96,7 @@ public class AliMorrisaneValuesPanel extends PluginPanel
         gbc.gridy++;
     }
 
-    private void addRuneRow(JPanel container, ItemManager itemManager, int itemId, GridBagConstraints gbc)
-    {
+    private void addRuneRow(JPanel container, ItemManager itemManager, int itemId, GridBagConstraints gbc) {
         final JPanel entryRow = new JPanel(new BorderLayout());
         entryRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         entryRow.setBorder(new EmptyBorder(4, 6, 4, 6));
@@ -122,11 +116,9 @@ public class AliMorrisaneValuesPanel extends PluginPanel
         gbc.gridy++;
     }
 
-    public void refreshRuneMetrics(final int itemId, final long quantity)
-    {
+    public void refreshRuneMetrics(final int itemId, final long quantity) {
         final JLabel metricLabel = valueLabels.get(itemId);
-        if (metricLabel != null)
-        {
+        if (metricLabel != null) {
             final long flatRatePrice = AliMorrisaneValuesPlugin.ALI_RUNE_PRICES.getOrDefault(itemId, 0);
             metricLabel.setText(QuantityFormatter.formatNumber(flatRatePrice * quantity) + " GP");
         }
@@ -134,13 +126,12 @@ public class AliMorrisaneValuesPanel extends PluginPanel
 
     public void refreshTotalLumpSum(final long netWorthSum)
     {
-        // Safe integer downcasting to pull appropriate sprite stack sizing tiers natively (ID 995 = Coins)
         int cleanAmountValue = (netWorthSum > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) netWorthSum;
 
-        // Remove the old coin icon and draw the newly calculated stack size sprite (changes dynamically based on quantity)
         coinImageLabel.setIcon(null);
         itemManager.getImage(995, cleanAmountValue, false).addTo(coinImageLabel);
 
         totalValueLabel.setText(QuantityFormatter.formatNumber(netWorthSum) + " GP");
     }
+
 }
